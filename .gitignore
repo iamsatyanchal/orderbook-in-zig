@@ -1,0 +1,57 @@
+# -------------------------------------------------------------------
+# Dependencies (Never commit these, they are rebuilt via npm/yarn)
+# -------------------------------------------------------------------
+node_modules/
+jspm_packages/
+web_modules/
+
+# -------------------------------------------------------------------
+# Environment Variables & Secrets (Contains sensitive API keys)
+# -------------------------------------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# -------------------------------------------------------------------
+# Logs & Diagnostic Reports
+# -------------------------------------------------------------------
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# -------------------------------------------------------------------
+# Build Outputs & Bundles (e.g., Next.js, Vite, TypeScript build)
+# -------------------------------------------------------------------
+dist/
+build/
+.next/
+.nuxt/
+out/
+.docusaurus/
+.cache/
+
+# -------------------------------------------------------------------
+# Testing & Coverage
+# -------------------------------------------------------------------
+coverage/
+.nyc_output/
+
+# -------------------------------------------------------------------
+# Editor & OS Specific Files (Optional but recommended)
+# -------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
