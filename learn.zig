@@ -22,6 +22,14 @@ const Order = struct {
     status: OrderStatus,
 };
 
+const Trade = struct {
+    buy_order_id: u64,
+    sell_order_id: u64,
+    price: u64,
+    quantity: u64,
+    timestamp: u128,
+};
+
 const PriceLevel = struct {
     price: u64,
     orders: std.ArrayList(Order),
@@ -184,6 +192,35 @@ const OrderBook = struct {
         }
         show("================================\n", .{});
     }
+
+    fn matchOrder(self: *OrderBook, incoming: *Order, trades: *std.ArrayList(Trade)) !void {
+        const oppo_matching = if (incoming.side == .buy) &self.asks else &self.bids;
+
+        while (incoming.quantity > 0) {
+            const best_price: ?u64 = null;
+            var oppo_it = oppo_matching.iterator();
+
+            while (oppo_it.next()) |entry| {
+                const price_level = entry.value_ptr.*;
+                if (best_price == null) {
+                    best_price = price_level.price;
+                } else if (incoming.side == .buy and price_level.price < best_price.?) {
+                    best_price = price_level.price;
+                } else if (incoming.side == .sell and price_level.price > best_price.?) {
+                    best_price = price_level.price;
+                }
+            }
+
+            if (best_price == null) break;
+
+            const hitting = if (incoming.side == .buy)
+                incoming.price >= best_price.?
+            else
+                incoming.price <= best_price.?;
+
+            if (!hitting) break;
+        }
+    }
 };
 
 pub fn main() !void {
@@ -194,7 +231,7 @@ pub fn main() !void {
 
     try book.addOrder(createOrder(3, .buy, 500, toTicks(149.00)));
     try book.addOrder(createOrder(5, .sell, 100, toTicks(151.50)));
-    try book.addOrder(createOrder(1, .buy, 100, toTicks(150.50))); // toTicks hata diya, direct int
+    try book.addOrder(createOrder(1, .buy, 100, toTicks(150.50)));
     try book.addOrder(createOrder(4, .sell, 50, toTicks(152.00)));
     try book.addOrder(createOrder(2, .buy, 200, toTicks(150.50)));
 
