@@ -197,7 +197,7 @@ const OrderBook = struct {
         const oppo_matching = if (incoming.side == .buy) &self.asks else &self.bids;
 
         while (incoming.quantity > 0) {
-            const best_price: ?u64 = null;
+            var best_price: ?u64 = null;
             var oppo_it = oppo_matching.iterator();
 
             while (oppo_it.next()) |entry| {
@@ -219,6 +219,32 @@ const OrderBook = struct {
                 incoming.price <= best_price.?;
 
             if (!hitting) break;
+
+            var level = oppo_matching.get(best_price.?).?;
+            var rest_orders = &level.orders.items[0];
+
+            const trade_qty = @min(incoming.quantity, rest_orders.quantity);
+            try trades.append(Trade{
+                .buy_order_id = if (incoming.side == .buy) incoming.id else rest_orders.id,
+                .sell_order_id = if (incoming.side == .sell) incoming.id else rest_orders.id,
+                .price = level.price,
+                .quantity = trade_qty,
+                .timestamp = @intCast(std.time.nanoTimestamp()),
+            });
+
+            incoming.quantity = incoming.quantity - trade_qty;
+            rest_orders.quantity = rest_orders.quantity - trade_qty;
+
+            if (rest_orders.quantity == 0) {
+                _ = level.orders.orderedRemove(0);
+                if (level.orders.items.len == 0) {
+                    _ = oppo_matching.remove(best_price.?);
+                    level.deinit();
+                }
+            }
+            if (incoming.quantity > 0) {
+                try self.addOrder(incoming.*);
+            }
         }
     }
 };
@@ -229,11 +255,35 @@ pub fn main() !void {
     var book = OrderBook.init(alloc);
     defer book.deinit();
 
-    try book.addOrder(createOrder(3, .buy, 500, toTicks(149.00)));
-    try book.addOrder(createOrder(5, .sell, 100, toTicks(151.50)));
-    try book.addOrder(createOrder(1, .buy, 100, toTicks(150.50)));
-    try book.addOrder(createOrder(4, .sell, 50, toTicks(152.00)));
-    try book.addOrder(createOrder(2, .buy, 200, toTicks(150.50)));
+    // Trades store karne ke liye list
+    var trades = std.ArrayList(Trade).init(alloc);
+    defer trades.deinit();
+
+    show("\n[1] Adding some SELL orders first...\n", .{});
+    try book.addOrder(createOrder(10, .sell, 50, toTicks(152.00)));
+    try book.addOrder(createOrder(13, .sell, 20, toTicks(352.00)));
+    try book.addOrder(createOrder(11, .sell, 100, toTicks(151.50)));
+    try book.addOrder(createOrder(14, .buy, 20, toTicks(352.00)));
 
     try book.print();
+
+    show("\n[2] Incoming BUY order: ID=20, Qty=80, Price=152.00\n", .{});
+
+    var new_buy = createOrder(20, .buy, 80, toTicks(152.00));
+    try book.matchOrder(&new_buy, &trades);
+
+    show("\n[3] Trades Executed:\n", .{});
+    for (trades.items) |trade| {
+        show("  BUY#{d} <-> SELL#{d} | Qty: {d} | Price: {d:.2}\n", .{
+            trade.buy_order_id,
+            trade.sell_order_id,
+            trade.quantity,
+            toFloat(trade.price),
+        });
+    }
+
+    show("\n[4] Order Book AFTER Match:\n", .{});
+    try book.print();
+
+    show("\n[5] Check Incoming Order Status: Remaining Qty = {d}\n", .{new_buy.quantity});
 }
