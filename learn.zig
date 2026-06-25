@@ -131,40 +131,58 @@ const OrderBook = struct {
 
     fn print(self: *const OrderBook) !void {
         show("\n========== ORDER BOOK ==========\n", .{});
-        const ask_keys = self.asks.keys();
-        if (ask_keys.len > 0) {
-            const sorted_asks = try self.allocator.alloc(u64, ask_keys.len);
+
+        show("Asks:\n", .{});
+        const ask_keys_count = self.asks.count();
+        if (ask_keys_count > 0) {
+            const sorted_asks = try self.allocator.alloc(u64, ask_keys_count);
             defer self.allocator.free(sorted_asks);
-            @memcpy(sorted_asks, ask_keys);
+
+            var i: usize = 0;
+            var ask_it = self.asks.iterator();
+            while (ask_it.next()) |entry| {
+                sorted_asks[i] = entry.key_ptr.*;
+                i += 1;
+            }
+
             std.mem.sort(u64, sorted_asks, {}, asc_compare);
             for (sorted_asks) |price| {
-                const level = self.asks.get(price).?;
-                show("  {d:.2} | Qty: {d} | Orders: {d}\n", .{
-                    toFloat(level.price),
-                    level.totalQuantity(),
-                    level.orders.items.len,
-                });
+                if (self.asks.get(price)) |level| {
+                    show("  {d:.2} | Qty: {d} | Orders: {d}\n", .{
+                        toFloat(level.price),
+                        level.totalQuantity(),
+                        level.orders.items.len,
+                    });
+                }
             }
         }
 
-        show("--------------- SPREAD ---------------\n", .{});
-
-        const bid_keys = self.bids.keys();
-        if (bid_keys.len > 0) {
-            const sorted_bids = try self.allocator.alloc(u64, bid_keys.len);
+        show("--------------------------------\n", .{});
+        show("Bids:\n", .{});
+        const bids_keys_count = self.bids.count();
+        if (bids_keys_count > 0) {
+            const sorted_bids = try self.allocator.alloc(u64, bids_keys_count);
             defer self.allocator.free(sorted_bids);
-            @memcpy(sorted_bids, bid_keys);
+
+            var j: usize = 0;
+            var bids_it = self.bids.iterator();
+            while (bids_it.next()) |entry| {
+                sorted_bids[j] = entry.key_ptr.*;
+                j += 1;
+            }
+
             std.mem.sort(u64, sorted_bids, {}, desc_compare);
             for (sorted_bids) |price| {
-                const level = self.bids.get(price).?;
-                show("  {d:.2} | Qty: {d} | Orders: {d}\n", .{
-                    toFloat(level.price),
-                    level.totalQuantity(),
-                    level.orders.items.len,
-                });
+                if (self.bids.get(price)) |level| {
+                    show("  {d:.2} | Qty: {d} | Orders: {d}\n", .{
+                        toFloat(level.price),
+                        level.totalQuantity(),
+                        level.orders.items.len,
+                    });
+                }
             }
         }
-        show("====================================\n", .{});
+        show("================================\n", .{});
     }
 };
 
@@ -174,7 +192,6 @@ pub fn main() !void {
     var book = OrderBook.init(alloc);
     defer book.deinit();
 
-    // Random order mein daal ke dekhte hain
     try book.addOrder(createOrder(3, .buy, 500, toTicks(149.00)));
     try book.addOrder(createOrder(5, .sell, 100, toTicks(151.50)));
     try book.addOrder(createOrder(1, .buy, 100, toTicks(150.50))); // toTicks hata diya, direct int
