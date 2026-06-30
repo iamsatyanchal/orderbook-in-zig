@@ -96,3 +96,25 @@ pub fn toTicks(price: f64) u64 {
 pub fn toFloat(price: u64) f64 {
     return @as(f64, @floatFromInt(price)) / 100.0;
 }
+
+pub const OrderPacket = extern struct {
+    id: u32,
+    side: u8,
+    quantity: u32,
+    price: u64,
+};
+
+pub fn printPacket(packet: OrderPacket) void {
+    const side_str: []const u8 = switch (packet.side) {
+        0 => "BUY",
+        1 => "SELL",
+        else => "UNKNOWN",
+    };
+
+    show("Packet -> ID: {d}, Side: {s}, Quantity: {d}, Price: {f}\n", .{
+        packet.id,
+        side_str,
+        packet.quantity,
+        toFloat(packet.price),
+    });
+}
