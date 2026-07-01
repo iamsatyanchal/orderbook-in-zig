@@ -97,7 +97,7 @@ pub fn toFloat(price: u64) f64 {
     return @as(f64, @floatFromInt(price)) / 100.0;
 }
 
-pub const OrderPacket = extern struct {
+pub const OrderPacket = packed struct {
     id: u32,
     side: u8,
     quantity: u32,
